@@ -8,8 +8,11 @@ USE AT YOUR OWN RISK.  THESE SCRIPTS INTENTIONALLY PLACE STRAIN ON YOUR SYSTEM. 
 These scripts are not meant to be run from your operating system.  Boot up a live GNU/Linux distribution first and then run the script.
 
 Download links for compatible live GNU/Linux Distributions:
+
  -<a href="https://grml.org/download/">GRML</a>
+ 
  -<a href="http://releases.ubuntu.com/14.04/">Ubuntu 14.04</a>
+ 
  -<a href="http://releases.ubuntu.com/16.04/">Ubuntu 16.04</a>
 
 If there is a problem with your hardware, hopefully this script will cause your computer to crash.  Finding the part of the script that crashes can help troubleshoot the problem area.
