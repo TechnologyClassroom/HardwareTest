@@ -9,6 +9,7 @@
 
 echo \ 
 echo Adding Universe entries to apt sources list...
+# These lines will override your /etc/apt/sources.list file.  Comment out or remove this section and manually add universe, if you absolutely cannot use a live OS.
 echo deb http://archive.ubuntu.com/ubuntu/ xenial main restricted universe > /etc/apt/sources.list
 echo deb http://security.ubuntu.com/ubuntu/ xenial-security main restricted universe >> /etc/apt/sources.list
 echo deb http://archive.ubuntu.com/ubuntu/ xenial-updates main restricted universe >> /etc/apt/sources.list
