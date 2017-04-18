@@ -38,14 +38,14 @@ sensors
 echo \ 
 
 #echo Testing RAM with memtester...
-#sudo memtester $(free -m | head -n 2 | tail -n 1 | awk '{print $7 -30}') 1
+#sudo memtester $(free -m | head -n 2 | tail -n 1 | awk '{print $7 -350}') 1
 #echo \ 
 
 echo Checking RAM capacity...
 free -g
 echo \ 
 echo Checking RAM speed...
-dmidecode -t 17 | grep Speed | tail -n 2
+dmidecode -t 17 | grep Speed | grep -v Unknown | tail -n 2
 echo \ 
 echo Check that the RAM capacity and speed are correct.
 echo Your RAM clock speed may be different because of CPU or motherboard designs.
@@ -53,15 +53,26 @@ echo \
 
 echo Checking storage drives...
 lsblk
-# More drive tests will be added in future releases.
+echo \ 
+
+echo Testing HDDs with hdparm...
+# SSDs should be excluded.
+cd /tmp
+lsblk -d -o name,rota | grep -v -e 0 -e sr -e loop -e NAME | awk '{ print "sudo hdparm -tT /dev/" $1 }' > hdparm.sh
+sh hdparm.sh
 echo \ 
 
 echo Network Interface Cards with ip a...
-ip a
+ip a | awk '{ print substr($2, 1, length($2)-1)}' | grep -v -e fore -e : -e se -e / -e lo
+echo Network Interface Cards with ifconfig...
+ifconfig | awk '{ print $1}' | grep -v -e coll -e RX -e TX -e inet -e UP -e Interr -e lo -e '^$'
 echo If network ports are missing, ensure the latest firmware is installed and
 echo Intel cards are switched on with BootUtil.exe -flashenable -all
-echo If ip a does not work, use ifconfig instead.
-# More network tests will be added in future releases.
+echo \ 
+
+echo Testing network cards with ethtool...
+ip a | awk '{ print "sleep 1 && sudo ethtool -t " substr($2, 1, length($2)-1) " 2>/dev/null"}' | grep -v -e fore -e : -e se -e /\  -e /2 -e lo > ethtest.sh
+sh ethtest.sh
 echo \ 
 
 echo Generating blink.sh...
