@@ -1,3 +1,5 @@
+#! /bin/bash
+
 # hwtestquickubu1404.sh
 # Test hardware with Ubuntu 14.04 Desktop live GNU/Linux distribution
 
