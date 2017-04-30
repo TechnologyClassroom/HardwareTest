@@ -1,12 +1,12 @@
 #! /bin/bash
 
 # hwtestquickubu.sh
-# Test hardware with Ubuntu 14.04 Desktop live GNU/Linux distribution
+# Test hardware with Ubuntu Desktop 16.04 or 14.04 live GNU/Linux distribution
 
 # Michael McMahon
 
 # To run this script, boot Ubuntu Desktop 16.04 or 14.04, try, and follow these instructions:
-# Open a terminal and run this script with:
+# Open a terminal, cd to the directory with this file, and run this script with:
 # sudo bash bluearchive.sh
 # OR
 # sudo /bin/bash bluearchive.sh
