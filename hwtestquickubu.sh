@@ -83,6 +83,7 @@ apt-get install -y lm-sensors >> /dev/null
 apt-get install -y smartmontools >> /dev/null
 apt-get install -y stress >> /dev/null
 #apt-get install -y stress-ng >> /dev/null
+mkdir /tmp/storage
 echo \ 
 
 
@@ -152,14 +153,12 @@ echo Executing smartmon.sh...
 sh smartmon.sh
 echo \ 
 
-
-echo Testing HDDs with hdparm...
+# hdparm
+echo Generating hdparm.sh...
 cd /tmp
 if [ $(cat /etc/*-release | grep 16.04 | wc -l) -gt 4 ]
 then
 	# SSDs and flash drives are excluded.
-	echo Generating hdparm.sh...
-	mkdir /tmp/storage
 	lsblk -S -d -o name,rota,tran | grep -v -e 0 -e sr -e usb -e ‘sda ‘ -e ‘sdb ‘ -e loop -e NAME | awk '{ print "sudo hdparm -tT /dev/" $1 " > /tmp/storage/" $1 " &" }' > hdparm.sh
 	echo hdparm tests will start in parallel.  Do not start any other drive tests until complete.
 	echo Logs can be found in the /tmp/storage/ folder.
@@ -167,8 +166,9 @@ fi
 if [ $(cat /etc/*-release | grep 14.04 | wc -l) -gt 4 ]
 then
 	# SSDs are excluded.  Older version of lsblk does not have tran.
-	lsblk -d -o name,rota | grep -v -e 0 -e sr -e loop -e NAME | awk '{ print "sudo hdparm -tT /dev/" $1 " &" }' > hdparm.sh
+	lsblk -d -o name,rota | grep -v -e 0 -e sr -e loop -e NAME | awk '{ print "sudo hdparm -tT /dev/" $1 " > /tmp/storage/" $1 " &" }' > hdparm.sh
 fi
+echo Testing HDDs with hdparm...
 sh hdparm.sh
 echo \ 
 
