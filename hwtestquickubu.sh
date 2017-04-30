@@ -176,6 +176,27 @@ echo \
 
 # Networking
 
+# Mellanox
+if [ $(lspci | grep Mellanox | wc -l) -gt 0 ]
+then
+	echo Mellanox card found.  Installing dependencies...
+	apt-get install -y build-essential >> /dev/null
+	apt-get install -y dkms >> /dev/null
+	echo Updating Mellanox firmware...
+	cd /tmp
+	wget -q http://www.mellanox.com/downloads/MFT/mft-4.6.0-48-x86_64-deb.tgz
+	tar zxf mft-4.6.0-48-x86_64-deb.tgz
+	cd mft-4.6.0-48-x86_64-deb
+	dpkg -i ./DEBS/mft-4*
+	dpkg -i ./DEBS/mft-o*
+	apt-get update
+	dpkg -i ./SDEBS/k*
+	mst start
+	sudo mlxfwmanager --query
+	echo Checking for Mellanox firmware updates...
+	mlxfwmanager --online -u -y
+fi
+
 # Report network cards and Mac Addresses
 if [ $(ls /sbin/ip | wc -l) -gt 0 ]
 then
