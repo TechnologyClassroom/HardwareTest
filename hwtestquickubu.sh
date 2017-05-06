@@ -44,6 +44,12 @@ else
 	exit 1
 fi
 
+# Disable screensaver
+echo Disabling screensaver...
+xset s off
+xset -dpms
+xset s noblank
+
 # Log all stdout to logfile with date.
 logfile=/tmp/$(date +%Y%m%d-%H%M).txt
 exec &> >(tee -a "$logfile")
@@ -76,15 +82,34 @@ fi
 
 echo Installing packages for stress test...
 apt-get update 2> /dev/null >> /dev/null # live 1604 has errors.  Programs still install.
-#apt-get install -y fio >> /dev/null
+apt-get install -y fio >> /dev/null
 apt-get install -y ledmon >> /dev/null
 apt-get install -y lm-sensors >> /dev/null
 #apt-get install -y memtester >> /dev/null
 apt-get install -y smartmontools >> /dev/null
 apt-get install -y stress >> /dev/null
 #apt-get install -y stress-ng >> /dev/null
+apt-get install -y sysstat >> /dev/null
+apt-get install -y tmux >> /dev/null
 mkdir /tmp/storage
 echo \ 
+
+# Compile lsblk with -o tran
+cd /tmp
+echo "Downloading util-linux v2.29.2 source (5MB)..."
+wget -q https://www.kernel.org/pub/linux/utils/util-linux/v2.29/util-linux-2.29.2.tar.xz
+echo Unarchiving util-linux...
+tar xf util-linux-2.29.2.tar.xz
+cd util-linux-2.29.2
+echo Configuring util-linux...
+./configure > /dev/null 2>/dev/null
+echo Compiling lsblk...
+make lsblk > /dev/null 2>/dev/null
+echo Old version is $(/bin/lsblk -V)
+echo New version is $(./lsblk -V)
+echo Installing v2.29.2 of lsblk...
+cp lsblk /bin/lsblk
+cd ..
 
 
 
@@ -98,10 +123,8 @@ sensors
 echo \ 
 
 echo If a kernel panic occurs, check CPU and RAM.
-#echo Testing CPU with 4 hour stress test...
-#stress --cpu $(cat /proc/cpuinfo | grep -e processor | wc -l) -t 4h
-echo Testing CPU with 55 second stress test...
-stress --cpu $(cat /proc/cpuinfo | grep -e processor | wc -l) -t 55
+echo Testing CPU with 2 minute stress test...
+stress --cpu $(cat /proc/cpuinfo | grep -e processor | wc -l) -t 120
 echo CPU stress test is complete.
 echo \ 
 
@@ -130,9 +153,9 @@ echo Check that the RAM speed is correct.
 echo Your RAM clock speed may be different because of CPU or motherboard designs.
 echo \ 
 
-echo Testing RAM with 55 second stress test...
-stress --vm-bytes $(cat /proc/meminfo | grep mF | awk '{printf "%d\n", $2 * 0.9}')k --vm-keep -m 1 -t 55
-echo Small test complete.  Use memtest+.
+echo Testing RAM with 2 minute stress test...
+stress --vm-bytes $(cat /proc/meminfo | grep mF | awk '{printf "%d\n", $2 * 0.9}')k --vm-keep -m 1 -t 120
+echo 2 minute stress test complete.  Use memtest+.
 echo \ 
 
 #echo Testing RAM with memtester...
@@ -153,24 +176,58 @@ echo Executing smartmon.sh...
 sh smartmon.sh
 echo \ 
 
+# WIP: Create temporary file with all unpartitioned drives that are not flash or SSD drives.
+# cat /proc/partitions | grep -v -e ram -e sr -e dm -e blocks -e '^$' | awk '{ sub(/[0-9]/,"",$4); print $4}'
+# This command lists all drive and removes numbers.
+# Remove entries with duplicates.
+# Remainder should be unpartitioned drives.
+# Create second list with SSD & Flash drives
+# Remove matches found on both lists.
+# Remainder should be unpartitioned drives safe for fio or dd tests.
+
 # hdparm
 echo Generating hdparm.sh...
 cd /tmp
-if [ $(cat /etc/*-release | grep 16.04 | wc -l) -gt 4 ]
+if [ $(lsblk -V | grep 2.29.2 | wc -l) -gt 0 ]
 then
 	# SSDs and flash drives are excluded.
 	lsblk -S -d -o name,rota,tran | grep -v -e 0 -e sr -e usb -e ‘sda ‘ -e ‘sdb ‘ -e loop -e NAME | awk '{ print "sudo hdparm -tT /dev/" $1 " > /tmp/storage/" $1 " &" }' > hdparm.sh
 	echo hdparm tests will start in parallel.  Do not start any other drive tests until complete.
-	echo Logs can be found in the /tmp/storage/ folder.
-fi
-if [ $(cat /etc/*-release | grep 14.04 | wc -l) -gt 4 ]
-then
-	# SSDs are excluded.  Older version of lsblk does not have tran.
-	lsblk -d -o name,rota | grep -v -e 0 -e sr -e loop -e NAME | awk '{ print "sudo hdparm -tT /dev/" $1 " > /tmp/storage/" $1 " &" }' > hdparm.sh
+else
+	if [ $(cat /etc/*-release | grep 16.04 | wc -l) -gt 4 ]
+	then
+		# SSDs and flash drives are excluded.
+		lsblk -S -d -o name,rota,tran | grep -v -e 0 -e sr -e usb -e ‘sda ‘ -e ‘sdb ‘ -e loop -e NAME | awk '{ print "sudo hdparm -tT /dev/" $1 " > /tmp/storage/" $1 " &" }' > hdparm.sh
+		echo hdparm tests will start in parallel.  Do not start any other drive tests until complete.
+	fi
+	if [ $(cat /etc/*-release | grep 14.04 | wc -l) -gt 4 ]
+	then
+		# SSDs are excluded.  Older version of lsblk does not have tran.
+		lsblk -d -o name,rota | grep -v -e 0 -e sr -e loop -e NAME | awk '{ print "sudo hdparm -tT /dev/" $1 " > /tmp/storage/" $1 " &" }' > hdparm.sh
+	fi
 fi
 echo Testing HDDs with hdparm...
 sh hdparm.sh
 echo \ 
+
+
+
+# tmux and Long stress test
+cd /tmp
+echo stress --cpu $(cat /proc/cpuinfo | grep -e processor | wc -l) -t 4h > cpu.sh
+echo pkill top >> cpu.sh
+echo pkill iostat >> cpu.sh
+echo pkill tmux >> cpu.sh
+echo "exit" >> cpu.sh
+echo stress --vm-bytes $(cat /proc/meminfo | grep mF | awk '{printf "%d\n", $2 * 0.9}')k --vm-keep -m 1 -t 4h > ram.sh
+echo "exit" >> ram.sh
+echo "iostat -d 2" >> fio2hourtest.sh
+echo "exit" >> fio2hourtest.sh
+# tmux new-session -d -s hwtest \; send-keys 'sh /tmp/cpu.sh && exit' 'C-m' \; rename-window 'hwtest' \; select-window -t hwtest:0 \; split-window -h \; send-keys 'sh /tmp/ram.sh && exit' 'C-m' \; split-window -v -t 0 \; send-keys 'top && exit' 'C-m' \; split-window -v -t 1 \; send-keys 'sh /tmp/fio2hourtest.sh && exit' 'C-m' \; attach-session -t hwtest
+echo Generating longtest.sh...
+echo "tmux new-session -d -s hwtest \; send-keys 'sh /tmp/cpu.sh && exit' 'C-m' \; rename-window 'hwtest' \; select-window -t hwtest:0 \; split-window -h \; send-keys 'sh /tmp/ram.sh && exit' 'C-m' \; split-window -v -t 0 \; send-keys 'top && exit' 'C-m' \; split-window -v -t 1 \; send-keys 'sh /tmp/fio2hourtest.sh && exit' 'C-m' \; attach-session -t hwtest" > longstress.sh
+echo To run a longer 4 hour stress test on the CPU, RAM, and drives simutaneously,
+echo run sudo sh /tmp/longstress.sh
 
 
 
@@ -214,13 +271,15 @@ echo If network ports are missing, ensure the latest firmware is installed and
 echo Intel cards are switched on with BootUtil.exe -flashenable -all
 echo \ 
 
-echo Testing network cards with ethtool...
+echo Generating ethtest.sh...
 cd /tmp
-ip a | awk '{ print "sleep 1 && sudo ethtool -t " substr($2, 1, length($2)-1) " 2> /dev/null | grep -v -e extra -e result -e Link"}' | grep -v -e fore -e : -e se -e /\  -e /2 -e lo > ethtest.sh
-sh ethtest.sh
-echo Key: 0 means PASS.
-echo Network connection may be broken after ethtool tests.  Reboot to fix connection.
-# When we send logs to a central server in the future, we will need to fix or skip this.
+echo Testing network cards with ethtool... > ethtest.sh
+ip a | awk '{ print "sleep 1 && sudo ethtool -t " substr($2, 1, length($2)-1) " 2> /dev/null | grep -v -e extra -e result -e Link"}' | grep -v -e fore -e : -e se -e /\  -e /2 -e lo >> ethtest.sh
+echo Key: 0 means PASS. >> ethtest.sh
+echo Network connection may be broken after ethtool tests.  Reboot to fix connection. >> ethtest.sh
+echo To test the network cards, run:
+echo    sudo sh /tmp/ethtest.sh
+echo This may break your network connection until you reboot.
 echo \ 
 
 
