@@ -15,9 +15,9 @@ live GNU/Linux distribution first and then run the script.
 Download links for compatible live GNU/Linux Distributions:
 
 - [GRML](https://grml.org/download/)
+- [Slax](https://www.slax.org/)
 - [Ubuntu 14.04 Desktop](http://releases.ubuntu.com/14.04/)
 - [Ubuntu 16.04 Desktop](http://releases.ubuntu.com/16.04/)
-- [Slax](https://www.slax.org/)
 
 If there is a problem with your hardware, this script should cause your computer
 to crash.  Finding the part of the script that crashes can help troubleshoot the
