@@ -17,6 +17,7 @@ Download links for compatible live GNU/Linux Distributions:
 - [GRML](https://grml.org/download/)
 - [Ubuntu 14.04 Desktop](http://releases.ubuntu.com/14.04/)
 - [Ubuntu 16.04 Desktop](http://releases.ubuntu.com/16.04/)
+- [Slax](https://www.slax.org/)
 
 If there is a problem with your hardware, this script should cause your computer
 to crash.  Finding the part of the script that crashes can help troubleshoot the
@@ -31,6 +32,5 @@ Contributions:
 - I have made scripts for some specific live operating systems.  Please,
   contribute changes for more operating systems.
 - I am looking for more tests.
-  - NVIDIA and cuda
 - Eventually, I would like to build my own live GNU/Linux distro that runs this
   script automatically built upon MLL, Arch, or GRML.

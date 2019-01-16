@@ -20,9 +20,6 @@
 # To skip the three stress tests, use the ```--skipstress``` argument.
 # sudo bash hwtest.sh --skipstress
 
-# To skip NVIDIA driver installation, use the ```--skipnvidia``` argument.
-# sudo bash hwtest.sh --skipnvidia
-
 
 
 # Initialization checks
