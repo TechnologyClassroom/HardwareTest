@@ -5,6 +5,9 @@
 # Test hardware with Debian based GNU/Linux distributions.
 # Michael McMahon
 
+# This script is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0).  See the LICENSE file for more information.
+
 # Tested on LiveOS Versions of Ubuntu 14.04 Desktop, Ubuntu 16.04 Desktop, GRML
 # 2017.05, and Slax 9.6.5.
 

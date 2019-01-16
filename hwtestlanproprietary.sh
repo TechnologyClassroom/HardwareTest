@@ -5,6 +5,9 @@
 # Test hardware with Debian based GNU/Linux distributions.
 # Michael McMahon
 
+# This script is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0).  See the LICENSE file for more information.
+
 # Tested on LiveOS Versions of Ubuntu 14.04 Desktop, Ubuntu 16.04 Desktop, GRML
 # 2017.05, and Slax 9.6.5.
 
@@ -22,6 +25,9 @@
 
 # To skip NVIDIA driver installation, use the ```--skipnvidia``` argument.
 # sudo bash hwtestlanproprietary.sh --skipnvidia
+
+# This script downloads and installs proprietary software that may not have your
+# best interest in mind.  hwtest.sh should be used to avoid this problem.
 
 
 
@@ -210,6 +216,8 @@ fdisk -l | grep dev | grep -v Disk
 echo "Downloading xtools..."
 cd /tmp
 wget -q ftp://10.12.17.15/pub/software/linux/SAS3ExpanderXtools_v3.3b.zip
+# wget -q ftp://ftp.supermicro.com/utility/ExpanderXtools_Lite/Linux/SAS3Expand\
+#erXtools_v3.3b_Linux_version.zip
 echo "Extracting xtools..."
 unzip -qq -o SAS3ExpanderXtools_v3.3b.zip
 chmod -R 755 Linux

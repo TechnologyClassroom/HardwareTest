@@ -27,6 +27,10 @@ Bash scripts can do nearly anything to your system.  In general, always read
 over scripts before using them.  If you want to remove functionality or a test,
 remove a line or add a pound sign (#) at the beginning of unwanted lines.
 
+The ```*proprietary.sh``` scripts download and install proprietary software that
+may not have your best interest in mind.  ```hwtest.sh``` should be used to
+avoid this problem.
+
 Contributions:
 
 - I have made scripts for some specific live operating systems.  Please,
