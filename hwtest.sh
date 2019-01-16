@@ -1,11 +1,12 @@
 #!/bin/bash
 
 # hwtest.sh
-# version 0.9.14
-# Test hardware with Debian based GNU/Linux distributions.  Tested on LiveOS
-#   Versions of Ubuntu 14.04 Desktop, Ubuntu 16.04 Desktop, and GRML.
-
+# version 0.9.17
+# Test hardware with Debian based GNU/Linux distributions.
 # Michael McMahon
+
+# Tested on LiveOS Versions of Ubuntu 14.04 Desktop, Ubuntu 16.04 Desktop, GRML
+# 2017.05, and Slax 9.6.5.
 
 # To run this script, boot a Debian based distribution and follow these steps:
 # Open a terminal and run this script with:
@@ -15,6 +16,12 @@
 # OR
 # sudo chmod 755 hwtest.sh
 # sudo ./hwtest.sh
+
+# To skip the three stress tests, use the ```--skipstress``` argument.
+# sudo bash hwtest.sh --skipstress
+
+# To skip NVIDIA driver installation, use the ```--skipnvidia``` argument.
+# sudo bash hwtest.sh --skipnvidia
 
 
 
@@ -48,10 +55,12 @@ fi
 
 # Disable screensaver
 echo "Disabling screensaver..."
-xset s off
-xset -dpms
-xset s noblank
-gsettings set org.gnome.desktop.screensaver idle-activation-enabled false
+xset s off 2>/dev/null
+xset -dpms 2>/dev/null
+xset s noblank 2>/dev/null
+gsettings set org.gnome.desktop.screensaver idle-activation-enabled false \
+2>/dev/null
+setterm -blank 0 -powerdown 0  -powersave off 2>/dev/null
 
 # Log all stdout to logfile with date.
 logfile=/tmp/$(date +%Y%m%d-%H%M).log
@@ -64,16 +73,17 @@ echo \
 # Updates and dependencies
 
 echo "Adding Universe entries to apt sources list..."
-add-apt-repository universe
+add-apt-repository universe 2>/dev/null >> /dev/null
 
 echo "Installing packages for stress test..."
 
-apt-get purge -y libappstream3 2>/dev/null >> /dev/null
+#apt-get purge -y libappstream3 2>/dev/null >> /dev/null  # This was necessary
+                                                          # with Ubuntu 16.04.3
 apt-get update 2> /dev/null >> /dev/null
+apt-get install -y dialog >> /dev/null
 apt-get install -y fio >> /dev/null
 apt-get install -y ledmon >> /dev/null
 apt-get install -y lm-sensors >> /dev/null
-apt-get install -y lsscsi >> /dev/null
 apt-get install -y nvme-cli >> /dev/null
 apt-get install -y sg3-utils >> /dev/null
 apt-get install -y smartmontools >> /dev/null
@@ -81,43 +91,70 @@ apt-get install -y sshpass >> /dev/null
 apt-get install -y stress >> /dev/null
 apt-get install -y sysstat >> /dev/null
 apt-get install -y tmux >> /dev/null
+apt-get install -y unzip >> /dev/null
 # Build temporary directory for storage test logs.
 mkdir /tmp/storage
 
 
 
-# Motherboard BIOS
+# Motherboard
 
-echo "Checking dmidecode -t 0..."
-dmidecode -t 0
+echo "dmidecode strings..."
+dmidecode --string bios-version | sed 's/^/bios-version,/'
+dmidecode --string bios-release-date | sed 's/^/bios-release-date,/'
+dmidecode --string system-manufacturer | sed 's/^/system-manufacturer,/'
+dmidecode --string system-product-name | sed 's/^/system-product-name,/'
+#dmidecode --string system-version | sed 's/^/system-version,/'
+dmidecode --string system-serial-number | sed 's/^/system-serial-number,/'
+dmidecode --string system-uuid | sed 's/^/system-uuid,/'
+dmidecode --string baseboard-manufacturer | sed 's/^/baseboard-manufacturer,/'
+dmidecode --string baseboard-product-name | sed 's/^/baseboard-product-name,/'
+dmidecode --string baseboard-version | sed 's/^/baseboard-version,/'
+dmidecode --string baseboard-serial-number | sed 's/^/baseboard-serial-number,/'
+dmidecode --string baseboard-serial-number | sed 's/^/baseboard-serial-number,/' > /tmp/brief.csv
+#dmidecode --string baseboard-asset-tag | sed 's/^/baseboard-asset-tag,/'
+dmidecode --string chassis-manufacturer | sed 's/^/chassis-manufacturer,/'
+dmidecode --string chassis-type | sed 's/^/chassis-type,/'
+#dmidecode --string chassis-version | sed 's/^/chassis-version,/'
+dmidecode --string chassis-serial-number | sed 's/^/chassis-serial-number,/'
+#dmidecode --string chassis-asset-tag | sed 's/^/chassis-asset-tag,/'
+
 
 
 # CPU
 
 echo "Checking CPU model..."
+dmidecode --string processor-family | sed 's/^/processor-family,/'
+dmidecode --string processor-manufacturer | sed 's/^/processor-manufacturer,/'
+dmidecode --string processor-version | sed 's/  / /g' | sed 's/^/processor-version,/'
+dmidecode --string processor-frequency | sed 's/^/processor-frequency,/'
 cat /proc/cpuinfo | grep name
 echo \ 
 
-echo "Checking load and temperatures before stress test..."
-echo \ 
-uptime
-echo \ 
-sensors
-echo \ 
-
-echo "If a kernel panic occurs, check CPU and RAM."
-echo "Testing CPU with 10 minute stress test..."
-stress --cpu $(cat /proc/cpuinfo | grep -e processor | wc -l) -t $((60*10))
-# stress --cpu $(cat /proc/cpuinfo | grep -e processor | wc -l) -t $((60*1))
-echo "CPU stress test is complete."
-echo \ 
-
-echo "Checking load and temperatures after stress test..."
-echo \ 
-uptime
-echo \ 
-sensors
-echo \ 
+if [[ $1 != "--skipstress" ]] && [[ $2 != "--skipstress" ]]
+then
+  echo "Checking load and temperatures before stress test..."
+  echo \ 
+  uptime
+  echo \ 
+  sensors
+  echo \ 
+  
+  echo "If a kernel panic occurs, check CPU and RAM."
+  echo "Testing CPU with 10 minute stress test..."
+  stress --cpu $(cat /proc/cpuinfo | grep -e processor | wc -l) -t $((60*10))
+  echo "CPU stress test is complete."
+  echo \ 
+  
+  echo "Checking load and temperatures after stress test..."
+  echo \ 
+  uptime
+  echo \ 
+  sensors
+  echo \ 
+else
+  echo "Skipping CPU stress test..."
+fi
 
 
 
@@ -138,19 +175,22 @@ echo "Your RAM clock speed may be different because of CPU or motherboard desig\
 ns."
 echo \ 
 
-echo "Testing RAM with 2 minute stress test..."
-# stress --vm-bytes 1k --vm-keep -m 1 -t 120
-stress --vm-bytes $(cat /proc/meminfo | grep mF | awk '{printf "%d\n", $2 * \
-0.9}')k --vm-keep -m 1 -t 120
-# stress --vm-bytes $(cat /proc/meminfo | grep mF | awk '{printf "%d\n", $2 * \
-#0.9}')k --vm-keep -m 1 -t 30
-echo "2 minute stress test complete.  Use memtest+."
-echo \ 
-
-# echo "Testing RAM with memtester..."
-# Lock times out on 256GB of memory.  Use memtest+.
-# sudo memtester $(free -m | head -n 2 | tail -n 1 | awk '{print $7 * 0.9}') 1
-# echo \ 
+if [[ $1 != "--skipstress" ]] && [[ $2 != "--skipstress" ]]
+then
+  echo "Testing RAM with 2 minute stress test..."
+  # stress --vm-bytes 1k --vm-keep -m 1 -t 120
+  stress --vm-bytes $(cat /proc/meminfo | grep mF | awk '{printf "%d\n", $2 * \
+  0.9}')k --vm-keep -m 1 -t $((60*2))
+  echo "2 minute stress test complete.  Use memtest+."
+  echo \ 
+  
+  # echo "Testing RAM with memtester..."
+  # Lock times out on 256GB of memory.  Use memtest+.
+  # memtester $(free -m | head -n 2 | tail -n 1 | awk '{print $7 * 0.9}') 1
+  # echo \ 
+else
+  echo "Skipping RAM stress test..."
+fi
 
 
 
@@ -159,16 +199,32 @@ echo \
 echo "Checking storage drives..."
 lsblk
 
+echo "Checking sector sizes..."
+fdisk -l | grep dev | grep -v Disk
+
 echo "Generating smartmon.sh..."
 cd /tmp
 fdisk -l | grep Disk\ | grep -v -e ram -e identifier -e swap | awk '{print \
 "smartctl --xall " substr($2, 1, length($2)-1) " | grep -e Firmware -e \
-Rotation -e Model"}' > smartmon.sh
+Rotation -e Model -e Serial -e result"}' > smartmon.sh
 echo "Executing smartmon.sh..."
 sh smartmon.sh
+sh smartmon.sh | grep Serial | awk '{ print $3 }' | sed 's/^/diskSNs,/' >> /tmp/brief.csv
 echo \ 
 
-echo "Checking nvme drives..."
+echo "Checking for Intel SSD drives..."
+sed 's/-e Firmware -e Rotation -e Model -e Serial -e result/-i intel 2>\/dev\/null >> intel.txt/g' \
+smartmon.sh > intelcheck.sh
+bash intelcheck.sh
+touch intel.txt
+if [ $(cat intel.txt | wc -l) -gt 0 ]
+then
+  echo "Intel drives were found!"
+fi
+echo "If Intel drives were expected, check that the controller"
+echo "card is set to JBOD."
+
+# echo "Checking nvme drives..."
 nvme list
 echo "Generating nvme.sh..."
 cd /tmp
@@ -189,6 +245,36 @@ echo \
 # Remove matches found on both lists.
 # Remainder should be unpartitioned drives safe for fio or dd tests.
 
+if [ $(lspci | grep 2308 | wc -l) -gt 0 ]
+then
+  echo "SAS2308 found!"
+fi
+
+if [ $(lspci | grep 3008 | wc -l) -gt 0 ]
+then
+  echo "HBA 3008 found!"
+fi
+
+if [ $(lspci | grep 3108 | wc -l) -gt 0 ]
+then
+  echo "SAS3108 found!"
+fi
+
+if [ $(lspci | grep 3224 | wc -l) -gt 0 ]
+then
+  echo "HBA 3224 found!"
+fi
+
+if [ $(lspci | grep Adaptec | wc -l) -gt 0 ]
+then
+  echo "Adaptec card found!"
+fi
+
+if [ $(lspci | grep Atto | wc -l) -gt 0 ]
+then
+  echo "Atto card found!"
+fi
+
 # hdparm
 echo "Generating hdparm.sh..."
 cd /tmp
@@ -196,7 +282,7 @@ if [ $(lsblk -V | grep 2.29.2 | wc -l) -gt 0 ]
 then
   # SSDs and flash drives are excluded.
   lsblk -S -d -o name,rota,tran | grep -v -e 0 -e sr -e usb -e 'sda ' -e 'sdb '\
--e loop -e NAME | awk '{ print "sudo hdparm -tT /dev/" $1 " > /tmp/storage/"\
+-e loop -e NAME | awk '{ print "hdparm -tT /dev/" $1 " > /tmp/storage/"\
 $1 " &" }' > hdparm.sh
   echo "hdparm tests will start in parallel.  Do not start any other drive test\
 s until complete."
@@ -205,7 +291,7 @@ else
   then
     # SSDs and flash drives are excluded.
     lsblk -S -d -o name,rota,tran | grep -v -e 0 -e sr -e usb -e 'sda ' -e \
-'sdb ' -e loop -e NAME | awk '{ print "sudo hdparm -tT /dev/" $1 " \
+'sdb ' -e loop -e NAME | awk '{ print "hdparm -tT /dev/" $1 " \
 > /tmp/storage/" $1 " &" }' > hdparm.sh
     echo "hdparm tests will start in parallel."
     echo "Do not start any other drive tests until complete."
@@ -214,7 +300,7 @@ else
   then
     # SSDs are excluded.  Older version of lsblk does not have tran.
     lsblk -d -o name,rota | grep -v -e 0 -e sr -e loop -e NAME | awk '{ print \
-"sudo hdparm -tT /dev/" $1 " > /tmp/storage/" $1 " &" }' > hdparm.sh
+"hdparm -tT /dev/" $1 " > /tmp/storage/" $1 " &" }' > hdparm.sh
   fi
 fi
 echo "Testing HDDs with hdparm..."
@@ -234,7 +320,7 @@ echo \
 #usb -e loop -e NAME | awk '{ print "dd bs=4M count=2048 if=/dev/zero \
 #of=/dev/" $1 " conv=fdatasync status=progress > /tmp/storage/dd" $1 " &" \
 #}' > ddtest.sh
-#  sudo sh ddtest.sh
+#  sh ddtest.sh
 #  echo "Use 'iostat' to see activity on drives."
 #  echo "Use 'ps aux | grep fio' to see if fio is still running."
 #fi
@@ -261,7 +347,7 @@ usb -e loop -e NAME | awk '{ print "fio --name=readwrite --ioengine=libaio \
 --iodepth=1 --rw=readwrite --bs=4k --direct=1 --size=512M --numjobs=8 \
 --filename=/dev/" $1 " --time_based=7200 --runtime=7200 --group_reporting \
 | grep io > /tmp/storage/fio" $1 " &"}' >> fio2hourtest.sh
-  # sudo sh fio2hourtest.sh # This can be run from longstress.sh or by
+  # sh fio2hourtest.sh # This can be run from longstress.sh or by
   #   uncommenting tmux line below.
 fi
 # With help of @tfindelkind from http://tfindelkind.com/2015/08/10/fio-flexible\
@@ -301,12 +387,23 @@ send-keys 'top && exit' 'C-m' \; split-window -v -t 1 \; send-keys 'sh \
 /tmp/fio2hourtest.sh && exit' 'C-m' \; attach-session -t hwtest" \
 > longstress.sh
 echo "To run a longer 4 hour stress test on the CPU, RAM, and drives"
-echo "simutaneously, run sudo sh /tmp/longstress.sh"
+echo "simutaneously, run sh /tmp/longstress.sh"
 
 
 
 # Networking
 
+# Mellanox
+if [ $(lspci | grep Mellanox | wc -l) -gt 0 ]
+then
+  echo "Mellanox card found!"
+fi
+
+# Aquantia
+if [ $(lspci | grep 1d6a | wc -l) -gt 0 ]
+then
+  echo "Aquantia card found!"
+fi
 
 # Report network cards and Mac Addresses
 if [ $(ls /sbin/ip | wc -l) -gt 0 ]
@@ -324,7 +421,7 @@ fi
 echo Mac Addresses:
 cat /sys/class/net/*/address | grep -v 0:00:00:0
 cat /sys/class/net/*/address | grep -v 0:00:00:0 | sed -n -e \
-'H;${x;s/\n/,/g;s/^,//;p;}' > /tmp/macaddresses.csv
+'H;${x;s/\n/,/g;s/^,//;p;}' | sed 's/^/NICmac,/' > /tmp/macaddresses.csv
 # Create a csv file of all Mac Addresses (Excluding IPMI)
 echo "If network ports are missing, ensure the latest firmware is installed and"
 echo "Intel cards are switched on with BootUtil.exe -flashenable -all"
@@ -333,14 +430,14 @@ echo \
 echo "Generating ethtest.sh..."
 cd /tmp
 echo "Testing network cards with ethtool..." > ethtest.sh
-ip a | awk '{ print "sleep 1 && sudo ethtool -t " substr($2, 1, length($2)-1) \
+ip a | awk '{ print "sleep 1 && ethtool -t " substr($2, 1, length($2)-1) \
 " 2> /dev/null | grep -v -e extra -e result -e Link"}' | grep -v -e fore -e : \
 -e se -e /\  -e /2 -e lo >> ethtest.sh
 echo "Key: 0 means PASS." >> ethtest.sh
 echo "Network connection may be broken after ethtool tests." >> ethtest.sh
 echo "Reboot to fix connection." >> ethtest.sh
 echo "To test the network cards, run:"
-echo "  sudo sh /tmp/ethtest.sh"
+echo "  sh /tmp/ethtest.sh"
 echo "This may break your network connection until you reboot."
 # If sending logs to a central server, skip ethtest.sh
 echo \ 
@@ -349,21 +446,10 @@ echo \
 
 # PCI Devices
 
-echo "Listing all NVIDIA cards..."
-echo "Card models are shown by a four character code instead of plaintext."
-echo "For example, NVIDIA Tesla P40 will show the code 1b38."
-echo "For a complete list of NVIDIA card codes, check the pci-ids at:"
-echo "http://pci-ids.ucw.cz/read/PC/10de"
-lspci | grep -i nvidia​
-# Explanation of this command:
-# lspci - list all PCI devices​
-# | -  Pipelines - The standard output of the first command is connected via
-#    a pipe to the  standard  input of the second command.
-# grep - print lines matching a pattern
-#   -i, --ignore-case
-#   Ignore case distinctions in both the PATTERN and the input files.
-#     (-i is specified by POSIX.)
-echo \ 
+if [ $(lspci | grep Altera | grep 0007 | wc -l) -gt 0 ]
+then
+  echo "BlueFish Neutron Card found!"
+fi
 
 echo "Listing all PCI devices..."
 lspci
@@ -376,7 +462,7 @@ echo \
 echo "Generating blink.sh..."
 cd /tmp
 fdisk -l | grep Disk\ | grep -v -e ram -e identifier -e swap | awk '{print \
-"sleep 1 && sudo ledctl locate=" substr($2, 1, length($2)-1)}' > blink.sh
+"sleep 1 && ledctl locate=" substr($2, 1, length($2)-1)}' > blink.sh
 echo "Test drive LED lights for each drive with:"
 echo "ledctl locate=/dev/sda"
 echo \ 
@@ -387,14 +473,47 @@ echo "If lights do not work, check backplane, pins, ports, and cables."
 echo \ 
 
 echo "Unmount /media/ubuntu/FAT16 before shutdown."
-echo "  sudo umount /media/ubuntu/FAT16"
+echo "  umount /media/ubuntu/FAT16"
 echo \ 
 echo "After checking LED lights, shutdown with:"
-echo "  sudo shutdown -h now"
+echo "  shutdown -h now"
 echo "Wait a moment and press the enter key."
 echo \ 
 
+
+
+# Check for IPMI.
+if [ $(dmidecode --type 38 | wc -l) -gt 5 ]
+then
+  echo "IPMI found!"
+fi
+
+echo "Appending brief log..."
+cat /tmp/macaddresses.csv >> /tmp/brief.csv
+
+
+
 # Log details and push log to FTP server
+echo "Shrinking log file..."
+sed -i 's/\o015/\n/g' $logfile
+dos2unix -f $logfile 2>/dev/null >/dev/null
+cat $logfile | awk '{gsub(/^[ \t]*$/,"---" NR);}1' > $logfile.new
+echo "Separating GPU logging information"
+sed -i 's/[ \t]*errors:/\nerrors:/g' $logfile.new
+sed -i 's/[ \t]*proc/\nproc/g' $logfile.new
+sed -i 's/[ \t]*temps:/\ntemps:/g' $logfile.new
+echo "Removing duplicate lines and cleaning extra newlines"
+cat $logfile.new | awk '!x[$0]++' > $logfile
+sed -i 's/---[0-9]*//g' $logfile
+sed -i ':r;$!{N;br};s/\nUnpacking/Unpacking/g' $logfile
+sed -i ':r;$!{N;br};s/\nPreparing to/Preparing to/g' $logfile
+sed -i ':r;$!{N;br};s/\nSelecting previously/Selecting previously/g' $logfile
+sed -i ':r;$!{N;br};s/\n\nSetting up/Setting up/g' $logfile
+sed -i ':r;$!{N;br};s/\nupdate-alternatives/update-alternatives/g' $logfile
+sed -i ':r;$!{N;br};s/\nProcessing triggers/Processing triggers/g' $logfile
+sed -i ':r;$!{N;br};s/\n\n(Reading database/(Reading database/g' $logfile
+echo "Logfile is smaller."
+
 echo "All temporary scripts and logs can be found in the /tmp/ folder."
 uptime
 if [ -z "$serial" ]
@@ -402,14 +521,22 @@ then
   echo Log saved to $logfile
   echo \ 
 else
-  echo "Log file $logfile renamed to $serial."
+  echo "Renaming log file $logfile to $serial.log..."
   cp $logfile /tmp/$serial.log
+  echo "Renaming csv file to $serial.csv..."
+  cp /tmp/brief.csv /tmp/$serial.csv
   #logfile=/tmp/$serial.log
-  sshpass -p insertpasswordhere scp -oUserKnownHostsFile=/dev/null \
+  echo "Uploading SO log to ftp..."
+  sshpass -p insertlogshere scp -oUserKnownHostsFile=/dev/null \
 -oStrictHostKeyChecking=no /tmp/$serial.log user@10.12.17.15:/home/user/logs/
+  echo "Uploading SO csv to ftp..."
+  sshpass -p insertlogshere scp -oUserKnownHostsFile=/dev/null \
+-oStrictHostKeyChecking=no /tmp/$serial.csv user@10.12.17.15:/home/user/logs/
   echo \ 
 fi
 
-sshpass -p insertpasswordhere scp -oUserKnownHostsFile=/dev/null \
+
+echo "Uploading timestamped log to ftp..."
+sshpass -p insertlogshere scp -oUserKnownHostsFile=/dev/null \
 -oStrictHostKeyChecking=no $logfile user@10.12.17.15:/home/user/logs/
-echo "Log files are copied to FTP server."
+echo "Hardware Test is complete.  Check the log, blink lights, & reboot."
