@@ -87,6 +87,7 @@ echo "Installing packages for stress test..."
                                                           # with Ubuntu 16.04.3
 apt-get update 2> /dev/null >> /dev/null
 apt-get install -y dialog >> /dev/null
+apt-get install -y ethtool >> /dev/null
 apt-get install -y fio >> /dev/null
 apt-get install -y ledmon >> /dev/null
 apt-get install -y lm-sensors >> /dev/null
@@ -558,14 +559,14 @@ echo \
 
 echo "Generating ethtest.sh..."
 cd /tmp
-echo "Testing network cards with ethtool..." > ethtest.sh
+echo "echo 'Testing network cards with ethtool...'" > ethtest.sh
 ip a | awk '{ print "sleep 1 && ethtool -t " substr($2, 1, length($2)-1) \
 " 2> /dev/null | grep -v -e extra -e result -e Link"}' | grep -v -e fore -e : \
 -e se -e /\  -e /2 -e lo >> ethtest.sh
 echo "Key: 0 means PASS." >> ethtest.sh
 echo "Network connection may be broken after ethtool tests." >> ethtest.sh
 echo "Reboot to fix connection." >> ethtest.sh
-echo "To test the network cards, run:"
+echo "To test the network cards, run this command as root:"
 echo "  sh /tmp/ethtest.sh"
 echo "This may break your network connection until you reboot."
 # If sending logs to a central server, skip ethtest.sh
