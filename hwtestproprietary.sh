@@ -501,7 +501,8 @@ send-keys 'top && exit' 'C-m' \; split-window -v -t 1 \; send-keys 'sh \
 /tmp/fio4hourtest.sh && exit' 'C-m' \; attach-session -t hwtest" \
 > longstress.sh
 echo "To run a longer 4 hour stress test on the CPU, RAM, and drives"
-echo "simutaneously, run sh /tmp/longstress.sh"
+echo "simutaneously, run this command as root:"
+echo "  sh /tmp/longstress.sh"
 
 
 
