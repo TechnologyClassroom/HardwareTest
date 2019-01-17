@@ -328,7 +328,7 @@ echo \
 #
 
 # fio
-echo "Generating fio2hourtest.sh..."
+echo "Generating fio4hourtest.sh..."
 echo "WARNING: If the OS is NOT on sda and sdb, this will be destructive."
 echo "WARNING: This can be destructive.  Use at your own risk."
 if [ $(cat /etc/*-release | grep 16.04 | wc -l) -gt 4 ]
@@ -336,19 +336,19 @@ then
 
   # SSDs and flash drives are excluded.
   cd /tmp
-  echo "echo 'Stopping hdparm...'" > fio2hourtest.sh
-  echo "pkill hdparm" >> fio2hourtest.sh
-  echo "echo 'Testing HDDs with fio...'" >> fio2hourtest.sh
+  echo "echo 'Stopping hdparm...'" > fio4hourtest.sh
+  echo "pkill hdparm" >> fio4hourtest.sh
+  echo "echo 'Testing HDDs with fio...'" >> fio4hourtest.sh
   echo "echo 'WARNING: If the OS is NOT on sda and sdb, this will be \
-destructive.'" >> fio2hourtest.sh
+destructive.'" >> fio4hourtest.sh
   echo "echo 'WARNING: This can be destructive.  Use at your own risk.'" \
-    >> fio2hourtest.sh
+    >> fio4hourtest.sh
   lsblk -S -d -o name,rota,tran | grep -v -e 0 -e sr -e 'sda ' -e 'sdb ' -e \
 usb -e loop -e NAME | awk '{ print "fio --name=readwrite --ioengine=libaio \
 --iodepth=1 --rw=readwrite --bs=4k --direct=1 --size=512M --numjobs=8 \
 --filename=/dev/" $1 " --time_based=7200 --runtime=7200 --group_reporting \
-| grep io > /tmp/storage/fio" $1 " &"}' >> fio2hourtest.sh
-  # sh fio2hourtest.sh # This can be run from longstress.sh or by
+| grep io > /tmp/storage/fio" $1 " &"}' >> fio4hourtest.sh
+  # sh fio4hourtest.sh # This can be run from longstress.sh or by
   #   uncommenting tmux line below.
 fi
 # With help of @tfindelkind from http://tfindelkind.com/2015/08/10/fio-flexible\
@@ -373,22 +373,23 @@ echo "exit" >> cpu.sh
 echo stress --vm-bytes $(cat /proc/meminfo | grep mF | awk '{printf "%d\n", $2 \
 * 0.9}')k --vm-keep -m 1 -t 4h > ram.sh
 echo "exit" >> ram.sh
-echo "iostat -ctd 2" >> fio2hourtest.sh
-echo "exit" >> fio2hourtest.sh
+echo "iostat -ctd 2" >> fio4hourtest.sh
+echo "exit" >> fio4hourtest.sh
 # tmux new-session -d -s hwtest \; send-keys 'sh /tmp/cpu.sh && exit' 'C-m' \; \
 #   rename-window 'hwtest' \; select-window -t hwtest:0 \; split-window -h \; \
 #   send-keys 'sh /tmp/ram.sh && exit' 'C-m' \; split-window -v -t 0 \; \
 #   send-keys 'top && exit' 'C-m' \; split-window -v -t 1 \; send-keys 'sh \
-#   /tmp/fio2hourtest.sh && exit' 'C-m' \; attach-session -t hwtest
+#   /tmp/fio4hourtest.sh && exit' 'C-m' \; attach-session -t hwtest
 echo "Generating longtest.sh..."
 echo "tmux new-session -d -s hwtest \; send-keys 'sh /tmp/cpu.sh && exit' \
 'C-m' \; rename-window 'hwtest' \; select-window -t hwtest:0 \; split-window \
 -h \; send-keys 'sh /tmp/ram.sh && exit' 'C-m' \; split-window -v -t 0 \; \
 send-keys 'top && exit' 'C-m' \; split-window -v -t 1 \; send-keys 'sh \
-/tmp/fio2hourtest.sh && exit' 'C-m' \; attach-session -t hwtest" \
+/tmp/fio4hourtest.sh && exit' 'C-m' \; attach-session -t hwtest" \
 > longstress.sh
 echo "To run a longer 4 hour stress test on the CPU, RAM, and drives"
-echo "simutaneously, run sh /tmp/longstress.sh"
+echo "simutaneously, run this command as root:"
+echo "  sh /tmp/longstress.sh"
 
 
 
