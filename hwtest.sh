@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # hwtest.sh
-# version 0.9.17
+# version 0.9.18
 # Test hardware with Debian based GNU/Linux distributions.
 # Michael McMahon
 
@@ -55,44 +55,36 @@ fi
 
 # Disable screensaver
 echo "Disabling screensaver..."
-xset s off 2>/dev/null
-xset -dpms 2>/dev/null
-xset s noblank 2>/dev/null
+xset s off >/dev/null 2>&1
+xset -dpms >/dev/null 2>&1
+xset s noblank >/dev/null 2>&1
 gsettings set org.gnome.desktop.screensaver idle-activation-enabled false \
-2>/dev/null
-setterm -blank 0 -powerdown 0  -powersave off 2>/dev/null
+>/dev/null 2>&1
+setterm -blank 0 -powerdown 0  -powersave off >/dev/null 2>&1
 
 # Log all stdout to logfile with date.
 logfile=/tmp/$(date +%Y%m%d-%H%M).log
 exec &> >(tee -a "$logfile")
 echo "Starting logfile as $logfile..."
-echo \ 
+echo
 
 
 
 # Updates and dependencies
 
 echo "Adding Universe entries to apt sources list..."
-add-apt-repository universe 2>/dev/null >> /dev/null
+add-apt-repository universe >/dev/null 2>&1
 
 echo "Installing packages for stress test..."
 
-#apt-get purge -y libappstream3 2>/dev/null >> /dev/null  # This was necessary
-                                                          # with Ubuntu 16.04.3
-apt-get update 2> /dev/null >> /dev/null
-apt-get install -y dialog >> /dev/null
-apt-get install -y ethtool >> /dev/null
-apt-get install -y fio >> /dev/null
-apt-get install -y ledmon >> /dev/null
-apt-get install -y lm-sensors >> /dev/null
-apt-get install -y nvme-cli >> /dev/null
-apt-get install -y sg3-utils >> /dev/null
-apt-get install -y smartmontools >> /dev/null
-apt-get install -y sshpass >> /dev/null
-apt-get install -y stress >> /dev/null
-apt-get install -y sysstat >> /dev/null
-apt-get install -y tmux >> /dev/null
-apt-get install -y unzip >> /dev/null
+#apt-get purge -y libappstream3 >/dev/null 2>&1  # This was necessary
+                                                 # with Ubuntu 16.04.3
+apt-get update >/dev/null 2>&1
+for package in dialog ethtool fio ledmon lm-sensors nvme-cli sg3-utils \
+               smartmontools sshpass stress sysstat tmux unzip; do
+  echo "Installing $package..."
+  apt install -y $package >/dev/null 2>&1
+done
 # Build temporary directory for storage test logs.
 mkdir /tmp/storage
 
@@ -129,30 +121,30 @@ dmidecode --string processor-family | sed 's/^/processor-family,/'
 dmidecode --string processor-manufacturer | sed 's/^/processor-manufacturer,/'
 dmidecode --string processor-version | sed 's/  / /g' | sed 's/^/processor-version,/'
 dmidecode --string processor-frequency | sed 's/^/processor-frequency,/'
-cat /proc/cpuinfo | grep name
-echo \ 
+grep name /proc/cpuinfo
+echo
 
 if [[ $1 != "--skipstress" ]] && [[ $2 != "--skipstress" ]]
 then
   echo "Checking load and temperatures before stress test..."
-  echo \ 
+  echo
   uptime
-  echo \ 
+  echo
   sensors
-  echo \ 
+  echo
   
   echo "If a kernel panic occurs, check CPU and RAM."
   echo "Testing CPU with 10 minute stress test..."
-  stress --cpu $(cat /proc/cpuinfo | grep -e processor | wc -l) -t $((60*10))
+  stress --cpu $(grep -e processor /proc/cpuinfo | wc -l) -t $((60*10))
   echo "CPU stress test is complete."
-  echo \ 
+  echo
   
   echo "Checking load and temperatures after stress test..."
-  echo \ 
+  echo
   uptime
-  echo \ 
+  echo
   sensors
-  echo \ 
+  echo
 else
   echo "Skipping CPU stress test..."
 fi
@@ -166,29 +158,29 @@ free -g
 echo "Check that the RAM capacity is correct."
 echo "Smaller values are acceptable."
 echo "If the difference is more than one stick, check RAM seating."
-echo \ 
+echo
 echo "Checking RAM speed..."
-echo \ 
+echo
 dmidecode -t 17 | grep Speed | grep -v Unknown | tail -n 2
-echo \ 
+echo
 echo "Check that the RAM speed is correct."
 echo "Your RAM clock speed may be different because of CPU or motherboard desig\
 ns."
-echo \ 
+echo
 
 if [[ $1 != "--skipstress" ]] && [[ $2 != "--skipstress" ]]
 then
   echo "Testing RAM with 2 minute stress test..."
   # stress --vm-bytes 1k --vm-keep -m 1 -t 120
-  stress --vm-bytes $(cat /proc/meminfo | grep mF | awk '{printf "%d\n", $2 * \
+  stress --vm-bytes $(grep mF /proc/meminfo | awk '{printf "%d\n", $2 * \
   0.9}')k --vm-keep -m 1 -t $((60*2))
   echo "2 minute stress test complete.  Use memtest+."
-  echo \ 
+  echo
   
   # echo "Testing RAM with memtester..."
   # Lock times out on 256GB of memory.  Use memtest+.
   # memtester $(free -m | head -n 2 | tail -n 1 | awk '{print $7 * 0.9}') 1
-  # echo \ 
+  # echo
 else
   echo "Skipping RAM stress test..."
 fi
@@ -211,14 +203,14 @@ Rotation -e Model -e Serial -e result"}' > smartmon.sh
 echo "Executing smartmon.sh..."
 sh smartmon.sh
 sh smartmon.sh | grep Serial | awk '{ print $3 }' | sed 's/^/diskSNs,/' >> /tmp/brief.csv
-echo \ 
+echo
 
 echo "Checking for Intel SSD drives..."
 sed 's/-e Firmware -e Rotation -e Model -e Serial -e result/-i intel 2>\/dev\/null >> intel.txt/g' \
 smartmon.sh > intelcheck.sh
 bash intelcheck.sh
 touch intel.txt
-if [ $(cat intel.txt | wc -l) -gt 0 ]
+if [ $(wc -l intel.txt) -gt 0 ]
 then
   echo "Intel drives were found!"
 fi
@@ -233,11 +225,11 @@ fdisk -l | grep 'Disk\ .*nvme' | awk '{print "nvme smart-log " substr($2, 1, \
 length($2)-1)}' > nvme.sh
 echo "Executing nvme.sh..."
 sh nvme.sh
-echo \ 
+echo
 
 # WIP: Create temporary file with all unpartitioned drives that are not flash or
 #   SSD drives.
-# cat /proc/partitions | grep -v -e ram -e sr -e dm -e blocks -e '^$' | awk '{ \
+# grep -v -e ram -e sr -e dm -e blocks -e '^$' /proc/partitions | awk '{ \
 #sub(/[0-9]/,"",$4); print $4}'
 # This command lists all drive and removes numbers.
 # Remove entries with duplicates.
@@ -288,7 +280,7 @@ $1 " &" }' > hdparm.sh
   echo "hdparm tests will start in parallel.  Do not start any other drive test\
 s until complete."
 else
-  if [ $(cat /etc/*-release | grep 16.04 | wc -l) -gt 4 ]
+  if [ $(grep 16.04 /etc/*-release | wc -l) -gt 4 ]
   then
     # SSDs and flash drives are excluded.
     lsblk -S -d -o name,rota,tran | grep -v -e 0 -e sr -e usb -e 'sda ' -e \
@@ -297,7 +289,7 @@ else
     echo "hdparm tests will start in parallel."
     echo "Do not start any other drive tests until complete."
   fi
-  if [ $(cat /etc/*-release | grep 14.04 | wc -l) -gt 4 ]
+  if [ $(grep 14.04 /etc/*-release | wc -l) -gt 4 ]
   then
     # SSDs are excluded.  Older version of lsblk does not have tran.
     lsblk -d -o name,rota | grep -v -e 0 -e sr -e loop -e NAME | awk '{ print \
@@ -306,13 +298,13 @@ else
 fi
 echo "Testing HDDs with hdparm..."
 sh hdparm.sh
-echo \ 
+echo
 
 # dd
 # echo "WARNING: If the OS comes up as anything else other than sda and sdb,"
 # echo "this will be destructive."
 # echo "WARNING: This can be destructive.  Use at your own risk."
-#if [ $(cat /etc/*-release | grep 16.04 | wc -l) -gt 4 ]
+#if [ $(grep 16.04 /etc/*-release | wc -l) -gt 4 ]
 #then
 #  echo "Testing HDDs with dd..."
 #  # SSDs and flash drives are excluded.
@@ -331,7 +323,7 @@ echo \
 echo "Generating fio4hourtest.sh..."
 echo "WARNING: If the OS is NOT on sda and sdb, this will be destructive."
 echo "WARNING: This can be destructive.  Use at your own risk."
-if [ $(cat /etc/*-release | grep 16.04 | wc -l) -gt 4 ]
+if [ $(grep 16.04 /etc/*-release | wc -l) -gt 4 ]
 then
 
   # SSDs and flash drives are excluded.
@@ -358,19 +350,19 @@ fi
 # https://tobert.github.io/post/2014-04-17-fio-output-explained.html
 
 echo "Storage test logs can be found in the /tmp/storage/ folder."
-echo \ 
+echo
 
 
 
 # tmux and Long stress test
 cd /tmp
-echo stress --cpu $(cat /proc/cpuinfo | grep -e processor | wc -l) -t 4h \
+echo stress --cpu $(grep -e processor /proc/cpuinfo | wc -l) -t 4h \
 > cpu.sh
 echo "pkill top" >> cpu.sh
 echo "pkill iostat" >> cpu.sh
 echo "pkill tmux" >> cpu.sh
 echo "exit" >> cpu.sh
-echo stress --vm-bytes $(cat /proc/meminfo | grep mF | awk '{printf "%d\n", $2 \
+echo stress --vm-bytes $(grep mF /proc/meminfo | awk '{printf "%d\n", $2 \
 * 0.9}')k --vm-keep -m 1 -t 4h > ram.sh
 echo "exit" >> ram.sh
 echo "iostat -ctd 2" >> fio4hourtest.sh
@@ -421,13 +413,13 @@ inet -e UP -e Interr -e lo -e '^$'
 fi
 
 echo Mac Addresses:
-cat /sys/class/net/*/address | grep -v 0:00:00:0
-cat /sys/class/net/*/address | grep -v 0:00:00:0 | sed -n -e \
+grep -v 0:00:00:0 /sys/class/net/*/address
+grep -v 0:00:00:0 /sys/class/net/*/address | sed -n -e \
 'H;${x;s/\n/,/g;s/^,//;p;}' | sed 's/^/NICmac,/' > /tmp/macaddresses.csv
 # Create a csv file of all Mac Addresses (Excluding IPMI)
 echo "If network ports are missing, ensure the latest firmware is installed and"
 echo "Intel cards are switched on with BootUtil.exe -flashenable -all"
-echo \ 
+echo
 
 echo "Generating ethtest.sh..."
 cd /tmp
@@ -442,7 +434,7 @@ echo "To test the network cards, run this command as root:"
 echo "  sh /tmp/ethtest.sh"
 echo "This may break your network connection until you reboot."
 # If sending logs to a central server, skip ethtest.sh
-echo \ 
+echo
 
 
 
@@ -455,7 +447,7 @@ fi
 
 echo "Listing all PCI devices..."
 lspci
-echo \ 
+echo
 
 
 
@@ -467,20 +459,20 @@ fdisk -l | grep Disk\ | grep -v -e ram -e identifier -e swap | awk '{print \
 "sleep 1 && ledctl locate=" substr($2, 1, length($2)-1)}' > blink.sh
 echo "Test drive LED lights for each drive with:"
 echo "ledctl locate=/dev/sda"
-echo \ 
+echo
 echo "Run sh /tmp/blink.sh to blink all drives with 1 second delay between \
 drives."
 echo "If drives fail to light, try again with controller card."
 echo "If lights do not work, check backplane, pins, ports, and cables."
-echo \ 
+echo
 
 echo "Unmount /media/ubuntu/FAT16 before shutdown."
 echo "  umount /media/ubuntu/FAT16"
-echo \ 
+echo
 echo "After checking LED lights, shutdown with:"
 echo "  shutdown -h now"
 echo "Wait a moment and press the enter key."
-echo \ 
+echo
 
 
 
@@ -498,14 +490,14 @@ cat /tmp/macaddresses.csv >> /tmp/brief.csv
 # Log details and push log to FTP server
 echo "Shrinking log file..."
 sed -i 's/\o015/\n/g' $logfile
-dos2unix -f $logfile 2>/dev/null >/dev/null
-cat $logfile | awk '{gsub(/^[ \t]*$/,"---" NR);}1' > $logfile.new
+dos2unix -f $logfile >/dev/null 2>&1
+awk '{gsub(/^[ \t]*$/,"---" NR);}1' $logfile > $logfile.new
 echo "Separating GPU logging information"
 sed -i 's/[ \t]*errors:/\nerrors:/g' $logfile.new
 sed -i 's/[ \t]*proc/\nproc/g' $logfile.new
 sed -i 's/[ \t]*temps:/\ntemps:/g' $logfile.new
 echo "Removing duplicate lines and cleaning extra newlines"
-cat $logfile.new | awk '!x[$0]++' > $logfile
+awk '!x[$0]++' $logfile.new > $logfile
 sed -i 's/---[0-9]*//g' $logfile
 sed -i ':r;$!{N;br};s/\nUnpacking/Unpacking/g' $logfile
 sed -i ':r;$!{N;br};s/\nPreparing to/Preparing to/g' $logfile
@@ -521,7 +513,7 @@ uptime
 if [ -z "$serial" ]
 then
   echo Log saved to $logfile
-  echo \ 
+  echo
 else
   echo "Renaming log file $logfile to $serial.log..."
   cp $logfile /tmp/$serial.log
@@ -534,7 +526,7 @@ else
   echo "Uploading SO csv to ftp..."
   sshpass -p insertlogshere scp -oUserKnownHostsFile=/dev/null \
 -oStrictHostKeyChecking=no /tmp/$serial.csv user@10.12.17.15:/home/user/logs/
-  echo \ 
+  echo
 fi
 
 
