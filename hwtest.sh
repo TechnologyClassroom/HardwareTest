@@ -31,7 +31,7 @@
 if [ "$BASH_VERSION" = '' ]; then
   echo "You are not using bash."
   echo "Use this syntax instead:"
-  echo "sudo bash bluearchive.sh"
+  echo "sudo bash hwtest.sh"
   exit 1
 fi
 
