@@ -149,6 +149,17 @@ else
   echo "Skipping CPU stress test..."
 fi
 
+# Check for --test-all argument
+if [ "$1" == "--test-all" ]; then
+    echo "Running all tests..."
+    # Add the commands that run all tests below:
+    ./hwtest.sh        # or call specific test functions if needed
+    ./hwtestlanproprietary.sh
+    ./hwtestproprietary.sh
+    exit 0
+fi
+
+# Existing script content...
 
 
 # RAM
