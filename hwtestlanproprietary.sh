@@ -75,6 +75,21 @@ echo "Starting logfile as $logfile..."
 echo \ 
 
 
+# Get the IP from the command line (if provided)
+SERVER_IP=$1
+
+if [ -z "$SERVER_IP" ]; then
+    echo "No server IP provided, using default network test."
+    # Default network test logic here
+else
+    echo "Running network test with server IP: $SERVER_IP"
+    # Add logic to perform tests with the specified server
+    ping -c 4 $SERVER_IP     # Example: ping the server
+    # Add additional test commands if necessary
+fi
+
+# Existing network test content...
+
 
 # Updates and dependencies
 
